@@ -52,6 +52,9 @@ class Satellite(Sphere):
         self.transmission_bandwidth = transmission_bandwidth
         self.total_data_transmitted = total_data_transmitted
         self.fuel = fuel
+        self.x_thrust = 3
+        self.y_thrust = 3
+        self.z_thrust = -3
     
     def check_local_airspace(self):
         pass 
@@ -93,19 +96,25 @@ earth.plot_data_transmission_locs()
 
 #-----------------------------------------------------------------------------------------------------#
 
-# Create Satellite object
-sat1 = Satellite(
-    x_cord=-3, 
-    y_cord=3, 
-    z_cord=-3, 
-    radius=0.2, 
-    axis=ax, 
-    color='red', 
-    transmission_bandwidth=12, 
-    total_data_transmitted=0,  
-    fuel=50
-    )
-sat1.plot()
+satellites = [Satellite(x_cord=np.random.uniform(-3, 3), y_cord=np.random.uniform(-3, 3), z_cord=np.random.uniform(-3, 3), radius=0.2, axis=ax, color='red', transmission_bandwidth=12, total_data_transmitted=0,  fuel=50)for i in range(5)]
+
+for sat in satellites: sat.plot()
+
+# # Create Satellite object
+# sat1 = Satellite(
+#     x_cord=-3, 
+#     y_cord=3, 
+#     z_cord=-3, 
+#     radius=0.2, 
+#     axis=ax, 
+#     color='red', 
+#     transmission_bandwidth=12, 
+#     total_data_transmitted=0,  
+#     fuel=50
+#     )
+# sat1.plot()
+
+
 
 #-----------------------------------------------------------------------------------------------------#
 #TODO: make it so that the satellite slows down when it gets farther away from earth and faster when it gets closer, do this by measuring distance from earth to satellite and decrease/increase t respectively
@@ -114,21 +123,27 @@ sat1.plot()
 
 # Define animate function
 def animate(frame):
+    global satellites
 
     t = frame * 0.5 # adjust this factor to control the speed of the satellite
 
-    #set a different variable than t for locs speed, make the locs rotate directly to the right, no z 
-    for point in data_transmission_locs:
-        point[0] = 2*np.cos(t)
-        point[1] = 2*np.sin(t)
-        # point[2] = 2*np.cos(t)
-    earth.plot_data_transmission_locs()
-    
-    sat1.x_cord = 3 * np.cos(t) 
-    sat1.y_cord = 3 * np.sin(t)
-    sat1.z_cord = -3 * np.cos(t)
+    for sat in satellites:
 
-    sat1.plot()
+        # distance = np.sqrt((sat.x_cord - earth.x_cord)**2 + (sat.y_cord - earth.y_cord)**2 + (sat.z_cord - earth.z_cord)**2)
+        # t_scaled = t / distance  # scale t by dividing it by the distance between satellite and Earth
+
+        sat.x_cord = sat.x_thrust * np.cos(t) 
+        sat.y_cord = sat.y_thrust * np.sin(t)
+        sat.z_cord = sat.z_thrust * np.cos(t)
+
+        sat.plot()
+
+    #set a different variable than t for locs speed, make the locs rotate directly to the right, no z 
+    # for point in data_transmission_locs:
+    #     point[0] = 2*np.cos(t)
+    #     point[1] = 2*np.sin(t)
+    #     # point[2] = 2*np.cos(t)
+    # earth.plot_data_transmission_locs()
 
 #-----------------------------------------------------------------------------------------------------#
 
