@@ -47,17 +47,35 @@ class Earth(Sphere):
 #TODO: check if objects exist within local defined 3d space
 
 class Satellite(Sphere):
-    def __init__(self, x_cord, y_cord, z_cord, radius, axis, color, transmission_bandwidth, total_data_transmitted, fuel):
+    def __init__(self, x_cord, y_cord, z_cord, radius, axis, color, transmission_bandwidth, total_data_transmitted, fuel, health):
         super().__init__(x_cord, y_cord, z_cord, radius, axis, color)
         self.transmission_bandwidth = transmission_bandwidth
         self.total_data_transmitted = total_data_transmitted
         self.fuel = fuel
-        self.x_thrust = 3
-        self.y_thrust = 3
-        self.z_thrust = -3
+        self.health = health
+        self.x_thrust = np.random.randint(-5, 5)
+        self.y_thrust = np.random.randint(-5, 5)
+        self.z_thrust = np.random.randint(-5, 5)
     
     def check_local_airspace(self):
         pass 
+
+    def check_collision_with_earth(self, earth):
+        distance = np.sqrt((self.x_cord - earth.x_cord) ** 2 + (self.y_cord - earth.y_cord) ** 2 + (
+                self.z_cord - earth.z_cord) ** 2)
+        if distance <= self.radius + earth.radius:
+            self.health = 0
+
+    def check_collision_with_satellites(self, satellites):
+        for satellite in satellites:
+            if satellite != self:  # skip checking collision with itself
+                distance = np.sqrt((self.x_cord - satellite.x_cord) ** 2 + (self.y_cord - satellite.y_cord) ** 2 + (
+                        self.z_cord - satellite.z_cord) ** 2)
+                if distance <= self.radius + satellite.radius:
+                    self.health = 0
+                    satellite.health = 0
+                    break
+
 
 #-----------------------------------------------------------------------------------------------------#
 
@@ -96,54 +114,62 @@ earth.plot_data_transmission_locs()
 
 #-----------------------------------------------------------------------------------------------------#
 
-satellites = [Satellite(x_cord=np.random.uniform(-3, 3), y_cord=np.random.uniform(-3, 3), z_cord=np.random.uniform(-3, 3), radius=0.2, axis=ax, color='red', transmission_bandwidth=12, total_data_transmitted=0,  fuel=50)for i in range(5)]
+satellites = [Satellite(
+    x_cord=x, 
+    y_cord=y, 
+    z_cord=z, 
+    radius=0.2, 
+    axis=ax, 
+    color='red', 
+    transmission_bandwidth=12, 
+    total_data_transmitted=0,  
+    fuel=50,
+    health=100
+    ) for _ in range(5)
+    for x, y, z in [(np.random.uniform(-3, 3), np.random.uniform(-3, 3), np.random.uniform(-3, 3))]
+    if np.sqrt(x**2 + y**2 + z**2) > (earth.radius + 0.2)
+]
 
-for sat in satellites: sat.plot()
-
-# # Create Satellite object
-# sat1 = Satellite(
-#     x_cord=-3, 
-#     y_cord=3, 
-#     z_cord=-3, 
-#     radius=0.2, 
-#     axis=ax, 
-#     color='red', 
-#     transmission_bandwidth=12, 
-#     total_data_transmitted=0,  
-#     fuel=50
-#     )
-# sat1.plot()
-
-
+for sat in satellites:
+    sat.plot()
 
 #-----------------------------------------------------------------------------------------------------#
-#TODO: make it so that the satellite slows down when it gets farther away from earth and faster when it gets closer, do this by measuring distance from earth to satellite and decrease/increase t respectively
-#TODO: to shift satellite orbit change the radius 3 for x, y, z respectively
-#TODO: slow down the data transmission locs revolutions
+#TODO: to shift satellite orbit change the radius 3 for x, y, z respectively, train rl agent on thrust, and decrease fuel when thrust is used
+#TODO: when thrust is used / changed, then use up fuel
+#TODO: 'end' simulation when all satellites are destroyed 
 
 # Define animate function
 def animate(frame):
-    global satellites
+    global satellites, earth
 
-    t = frame * 0.5 # adjust this factor to control the speed of the satellite
+    t = frame * 0.25 # adjust this factor to control the speed of the satellite
 
     for sat in satellites:
 
-        # distance = np.sqrt((sat.x_cord - earth.x_cord)**2 + (sat.y_cord - earth.y_cord)**2 + (sat.z_cord - earth.z_cord)**2)
-        # t_scaled = t / distance  # scale t by dividing it by the distance between satellite and Earth
+        sat.check_collision_with_earth(earth)
+        sat.check_collision_with_satellites(satellites)
+
+        if sat.health == 0:
+            sat.main_sphere._visible = False
+            satellites.remove(sat)
+            print('deleted', str(len(satellites)))
+
+        distance = np.linalg.norm(np.array([sat.x_cord, sat.y_cord, sat.z_cord]) - np.array([earth.x_cord, earth.y_cord, earth.z_cord]))
+
+        # Decrease satellite speed when farther away from Earth and increase speed when closer
+        sat_radius = sat.radius + 0.2
+        sat_speed = 0.1 + (distance - earth.radius - sat_radius) * 0.01
+        sat.x_cord += sat.x_thrust * sat_speed
+        sat.y_cord += sat.y_thrust * sat_speed
+        sat.z_cord += sat.z_thrust * sat_speed
 
         sat.x_cord = sat.x_thrust * np.cos(t) 
         sat.y_cord = sat.y_thrust * np.sin(t)
         sat.z_cord = sat.z_thrust * np.cos(t)
 
         sat.plot()
-
-    #set a different variable than t for locs speed, make the locs rotate directly to the right, no z 
-    # for point in data_transmission_locs:
-    #     point[0] = 2*np.cos(t)
-    #     point[1] = 2*np.sin(t)
-    #     # point[2] = 2*np.cos(t)
-    # earth.plot_data_transmission_locs()
+    
+    return satellites, earth
 
 #-----------------------------------------------------------------------------------------------------#
 
